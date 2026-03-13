@@ -213,18 +213,18 @@
 
         /* 收合按鈕（突出在側欄外緣） */
         .panel-toggle {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            width: 20px; height: 52px;
+            position: fixed; top: 50%; transform: translateY(-50%);
+            width: 22px; height: 56px;
             background: #5c3d2e; color: #f5efe6;
             border: none; cursor: pointer; z-index: 400;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             box-shadow: 2px 0 8px rgba(0,0,0,0.3);
-            transition: background 0.15s;
+            transition: background 0.15s, left 0.25s, right 0.25s;
         }
         .panel-toggle:hover { background: #c8956c; }
-        #toolbarToggle  { right: -20px; border-radius: 0 8px 8px 0; }
-        #controlsToggle { left: -20px;  border-radius: 8px 0 0 8px; background: #8b6355; box-shadow: -2px 0 8px rgba(0,0,0,0.3); }
+        #toolbarToggle  { border-radius: 0 8px 8px 0; }
+        #controlsToggle { border-radius: 8px 0 0 8px; background: #8b6355; box-shadow: -2px 0 8px rgba(0,0,0,0.3); }
         #controlsToggle:hover { background: #c8956c; }
 
         /* 收合後邊緣召回條 */
@@ -365,7 +365,7 @@
                 <option value="overlay">📌 參考底圖</option>
                 <option value="draw">🖼 置入畫布</option>
             </select>
-            <div style="font-size:0.63rem;color:#a07060;margin-top:4px;">套用至：本機上傳 / AI 生圖 / 雲端硬碟</div>
+            <div style="font-size:0.63rem;color:#a07060;margin-top:4px;">套用至：本機上傳 / AI 生圖 / Google Drive</div>
         </div>
 
         <!-- ② AI 生圖 -->
@@ -503,7 +503,11 @@ window.addEventListener('DOMContentLoaded', function() {
     initCtx();
     updateCanvasAndImagePosition();
     updateAiImportLabel();
-    window.addEventListener('resize', updateCanvasAndImagePosition);
+    setTimeout(updateTogglePositions, 150);
+    window.addEventListener('resize', function() {
+        updateCanvasAndImagePosition();
+        updateTogglePositions();
+    });
 });
 
 function initCtx() {
@@ -986,24 +990,45 @@ function selectDriveImage(fileId, fileName, thumbnailLink) {
 }
 
 // ── 側欄收合 ──────────────────────────────────────
+function updateTogglePositions() {
+    var toolbar  = document.getElementById('toolbar');
+    var controls = document.getElementById('controls');
+    var tbBtn    = document.getElementById('toolbarToggle');
+    var ctBtn    = document.getElementById('controlsToggle');
+    if (!toolbar || !tbBtn) return;
+
+    var tbRect = toolbar.getBoundingClientRect();
+    var ctRect = controls.getBoundingClientRect();
+
+    tbBtn.style.left = tbRect.right + 'px';
+    ctBtn.style.left = (ctRect.left - 22) + 'px';
+}
+
 function togglePanel(side) {
     if (side === 'toolbar') {
-        var el      = document.getElementById('toolbar');
-        var btn     = document.getElementById('toolbarToggle');
-        var recall  = document.getElementById('toolbarRecall');
+        var el     = document.getElementById('toolbar');
+        var btn    = document.getElementById('toolbarToggle');
+        var recall = document.getElementById('toolbarRecall');
         var collapsed = el.classList.toggle('collapsed');
         btn.textContent = collapsed ? '▶' : '◀';
         recall.style.display = collapsed ? 'flex' : 'none';
     } else {
-        var el      = document.getElementById('controls');
-        var btn     = document.getElementById('controlsToggle');
-        var recall  = document.getElementById('controlsRecall');
+        var el     = document.getElementById('controls');
+        var btn    = document.getElementById('controlsToggle');
+        var recall = document.getElementById('controlsRecall');
         var collapsed = el.classList.toggle('collapsed');
         btn.textContent = collapsed ? '◀' : '▶';
         recall.style.display = collapsed ? 'flex' : 'none';
     }
-    setTimeout(updateCanvasAndImagePosition, 280);
+    setTimeout(function() {
+        updateTogglePositions();
+        updateCanvasAndImagePosition();
+    }, 280);
 }
+
+window.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updateTogglePositions, 100);
+});
 var toastTimer;
 function toast(msg) {
     var el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
