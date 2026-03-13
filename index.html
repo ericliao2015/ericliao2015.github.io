@@ -196,12 +196,60 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
 
+        /* ── 側欄收合 ── */
+        #toolbar, #controls {
+            transition: width 0.25s ease, min-width 0.25s ease, padding 0.25s ease;
+            overflow: hidden;
+            position: relative;
+        }
+        #toolbar.collapsed  { width: 0 !important; min-width: 0 !important; padding: 0 !important; }
+        #controls.collapsed { width: 0 !important; min-width: 0 !important; padding: 0 !important; }
+
+        /* 收合按鈕（貼在側欄邊緣） */
+        .panel-toggle {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 18px; height: 48px;
+            background: #5c3d2e; color: #f5efe6;
+            border: none; cursor: pointer; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; border-radius: 0 6px 6px 0;
+            box-shadow: 2px 0 6px rgba(0,0,0,0.2);
+            transition: background 0.15s;
+        }
+        .panel-toggle:hover { background: #c8956c; }
+        #toolbarToggle { right: -18px; border-radius: 0 6px 6px 0; }
+        #controlsToggle {
+            left: -18px; border-radius: 6px 0 0 6px;
+            background: #8b6355;
+            box-shadow: -2px 0 6px rgba(0,0,0,0.2);
+        }
+        #controlsToggle:hover { background: #c8956c; }
+
+        /* 收合後邊緣召回條 */
+        .panel-recall {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            width: 14px; height: 56px;
+            background: rgba(92,61,46,0.75); color: #f5efe6;
+            border: none; cursor: pointer; z-index: 300;
+            display: none; align-items: center; justify-content: center;
+            font-size: 0.6rem; border-radius: 0 6px 6px 0;
+            backdrop-filter: blur(4px);
+            transition: background 0.15s;
+        }
+        .panel-recall:hover { background: #c8956c; }
+        #toolbarRecall  { left: 0; border-radius: 0 6px 6px 0; }
+        #controlsRecall { right: 0; border-radius: 6px 0 0 6px; }
+        #toolbar.collapsed  ~ #canvasArea #toolbarRecall,
+        body.toolbar-collapsed  #toolbarRecall  { display: flex; }
+        body.controls-collapsed #controlsRecall { display: flex; }
+
         @media (max-width: 800px) {
             #mainLayout { flex-direction: column; height: auto; }
-            #toolbar { width: 100%; min-width: 0; flex-direction: row; flex-wrap: wrap; padding: 8px; }
+            #toolbar { width: 100% !important; min-width: 0 !important; flex-direction: row; flex-wrap: wrap; padding: 8px !important; }
             .tb-section { min-width: 140px; }
             #canvasArea { min-height: 55vw; flex: none; height: 60vw; }
-            #controls { width: 100%; min-width: 0; }
+            #controls { width: 100% !important; min-width: 0 !important; }
+            .panel-toggle, .panel-recall { display: none !important; }
         }
     </style>
 </head>
@@ -215,6 +263,7 @@
 <div id="mainLayout">
 
     <div id="toolbar">
+        <button class="panel-toggle" id="toolbarToggle" onclick="togglePanel('toolbar')" title="收合工具欄">◀</button>
         <div class="tb-section">
             <span class="tb-label">畫布比例</span>
             <div class="ratio-row">
@@ -307,6 +356,7 @@
 
     <!-- 右側控制欄 -->
     <div id="controls">
+        <button class="panel-toggle" id="controlsToggle" onclick="togglePanel('controls')" title="收合控制欄">▶</button>
 
         <!-- ① 匯入方式（共用） -->
         <div class="ctrl-section" style="background:#fff8f0;border-left:3px solid #c8956c;">
@@ -418,6 +468,9 @@
 
 </div>
 <div id="toast"></div>
+<!-- 邊緣召回條 -->
+<button class="panel-recall" id="toolbarRecall"  onclick="togglePanel('toolbar')"  title="展開工具欄">▶</button>
+<button class="panel-recall" id="controlsRecall" onclick="togglePanel('controls')" title="展開控制欄">◀</button>
 
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbwvn9IYYG_zqFNc0xtIcJgMYmqLMbHFAmx7VoYf4u1gBecbmfU8EwAllBepeX8-aoNBsw/exec';
@@ -933,7 +986,28 @@ function selectDriveImage(fileId, fileName, thumbnailLink) {
     img.src = thumbUrl;
 }
 
-// ── Toast ──────────────────────────────────────────
+// ── 側欄收合 ──────────────────────────────────────
+function togglePanel(side) {
+    if (side === 'toolbar') {
+        var el = document.getElementById('toolbar');
+        var btn = document.getElementById('toolbarToggle');
+        var recall = document.getElementById('toolbarRecall');
+        var collapsed = el.classList.toggle('collapsed');
+        btn.textContent = collapsed ? '▶' : '◀';
+        recall.style.display = collapsed ? 'flex' : 'none';
+        document.body.classList.toggle('toolbar-collapsed', collapsed);
+    } else {
+        var el = document.getElementById('controls');
+        var btn = document.getElementById('controlsToggle');
+        var recall = document.getElementById('controlsRecall');
+        var collapsed = el.classList.toggle('collapsed');
+        btn.textContent = collapsed ? '◀' : '▶';
+        recall.style.display = collapsed ? 'flex' : 'none';
+        document.body.classList.toggle('controls-collapsed', collapsed);
+    }
+    // 收合後重新計算畫布位置
+    setTimeout(updateCanvasAndImagePosition, 280);
+}
 var toastTimer;
 function toast(msg) {
     var el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
