@@ -148,7 +148,50 @@
         .latte-btn { display: block; width: 100%; padding: 8px; margin-bottom: 5px; border: none; border-radius: 6px; color: white; font-size: 0.78rem; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; }
         .latte-btn.color { background: #9c27b0; } .latte-btn.bw { background: #607d8b; }
 
-        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2c1810; color: #f5efe6; padding: 9px 20px; border-radius: 20px; font-size: 0.82rem; z-index: 9999; transition: transform 0.25s ease; pointer-events: none; white-space: nowrap; }
+        /* Drive 圖片選取浮動視窗 */
+        #driveBrowserOverlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 500;
+            align-items: center; justify-content: center;
+        }
+        #driveBrowserOverlay.show { display: flex; }
+        #driveBrowserDialog {
+            background: white; border-radius: 12px;
+            width: 600px; max-width: 92vw; max-height: 80vh;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+        }
+        #driveBrowserHeader {
+            background: #2c1810; color: #f5efe6;
+            padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+        }
+        #driveBrowserHeader h3 { font-size: 0.9rem; margin: 0; }
+        #driveBrowserClose {
+            background: none; border: none; color: #f5efe6;
+            font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0 4px;
+        }
+        #driveBrowserGrid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 8px; padding: 12px; overflow-y: auto; flex: 1;
+        }
+        .drive-thumb {
+            aspect-ratio: 1; border-radius: 6px; overflow: hidden;
+            cursor: pointer; border: 2px solid transparent;
+            transition: border-color 0.15s, transform 0.15s;
+            background: #f0ebe3; position: relative;
+        }
+        .drive-thumb:hover { border-color: #c8956c; transform: scale(1.03); }
+        .drive-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .drive-thumb-name {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.55); color: white;
+            font-size: 0.6rem; padding: 3px 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        #driveBrowserStatus {
+            padding: 8px 12px; font-size: 0.75rem; color: #8b6355;
+            border-top: 1px solid rgba(44,24,16,0.08); text-align: center; min-height: 36px;
+        } transform: translateX(-50%) translateY(80px); background: #2c1810; color: #f5efe6; padding: 9px 20px; border-radius: 20px; font-size: 0.82rem; z-index: 9999; transition: transform 0.25s ease; pointer-events: none; white-space: nowrap; }
         #toast.show { transform: translateX(-50%) translateY(0); }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
@@ -226,6 +269,18 @@
         </div>
     </div>
 
+    <!-- Google Drive 圖片選取浮動視窗 -->
+    <div id="driveBrowserOverlay">
+        <div id="driveBrowserDialog">
+            <div id="driveBrowserHeader">
+                <h3>☁️ 選取 Google Drive 圖片</h3>
+                <button id="driveBrowserClose" onclick="closeDriveBrowser()">✕</button>
+            </div>
+            <div id="driveBrowserGrid"></div>
+            <div id="driveBrowserStatus">載入中...</div>
+        </div>
+    </div>
+
     <!-- 中間畫布區 -->
     <div id="canvasArea">
         <!-- 清除確認 -->
@@ -252,6 +307,19 @@
 
     <!-- 右側控制欄 -->
     <div id="controls">
+
+        <!-- ① 匯入方式（共用） -->
+        <div class="ctrl-section" style="background:#fff8f0;border-left:3px solid #c8956c;">
+            <div class="ctrl-title">↙ 匯入方式（共用）</div>
+            <select id="aiMode" onchange="updateAiImportLabel()"
+                style="width:100%;padding:6px 8px;border:1.5px solid rgba(44,24,16,0.15);border-radius:6px;font-size:0.78rem;color:#2c1810;background:white;cursor:pointer;">
+                <option value="overlay">📌 參考底圖</option>
+                <option value="draw">🖼 置入畫布</option>
+            </select>
+            <div style="font-size:0.63rem;color:#a07060;margin-top:4px;">套用至：本機上傳 / AI 生圖 / Google Drive</div>
+        </div>
+
+        <!-- ② AI 生圖 -->
         <div class="ctrl-section ai-section">
             <div class="ctrl-title">✨ AI 生圖</div>
             <textarea class="ai-prompt" id="aiPrompt" placeholder="輸入圖片描述...&#10;例如：a cute cat, minimalist"></textarea>
@@ -272,40 +340,52 @@
                     <option value="3:4">3:4</option>
                 </select>
             </div>
-            <div class="ai-opt-row">
-                <span>匯入方式</span>
-                <select class="ai-select" id="aiMode" onchange="updateAiImportLabel()">
-                    <option value="overlay">參考底圖</option>
-                    <option value="draw">畫到畫布</option>
-                </select>
-            </div>
             <button class="btn-generate" id="generateBtn" onclick="generateImage()">🎨 生成圖片</button>
             <div id="aiStatus"></div>
             <img id="aiPreview" alt="AI 預覽">
             <button id="aiImportBtn" onclick="importAiImage()">↙ 匯入為參考底圖</button>
         </div>
 
+        <!-- ③ 參考圖片來源 -->
         <div class="ctrl-section">
-            <div class="ctrl-title">📷 參考圖片</div>
+            <div class="ctrl-title">📷 圖片來源</div>
             <button type="button" class="upload-label" onclick="triggerFilePick()">📁 從裝置上傳圖片</button>
             <input type="file" id="fileInput" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none" onchange="handleFileUpload(event)">
-            <div class="opacity-row">
+            <button class="ctrl-btn" onclick="openDriveBrowser()">☁️ 從 Google Drive 選取</button>
+            <div class="opacity-row" style="margin-top:6px;">
                 <label>透明度</label>
                 <input type="range" id="opacityRange" min="0" max="100" value="50" oninput="setOpacity(this.value)">
                 <span id="opacityVal">50%</span>
             </div>
             <button class="ctrl-btn" id="toggleImgBtn" onclick="toggleOverlay()">👁 隱藏圖片</button>
-            <button class="ctrl-btn" onclick="authenticateAndPick()">☁️ 從 Google Drive 選取</button>
+            <button class="ctrl-btn" onclick="clearOverlayImage()" style="color:#e74c3c;">🗑 清除底圖</button>
         </div>
 
+        <!-- ④ 底圖調整 -->
         <div class="ctrl-section">
-            <div class="ctrl-title">🔧 圖片調整</div>
+            <div class="ctrl-title">🔧 底圖調整</div>
             <div class="img-ctrl-grid">
                 <button class="img-ctrl-btn" onclick="scaleImg(0.1)">🔍 放大</button>
-                <button class="img-ctrl-btn" onclick="scaleImg(-0.1)">🔍 縮小</button>
-                <button class="img-ctrl-btn" onclick="rotateImg(-90)">↺ 左轉</button>
-                <button class="img-ctrl-btn" onclick="rotateImg(90)">↻ 右轉</button>
+                <button class="img-ctrl-btn" onclick="scaleImg(-0.1)">🔎 縮小</button>
             </div>
+            <!-- 360度旋轉 -->
+            <div style="margin:6px 0 4px;">
+                <div style="font-size:0.68rem;color:#8b6355;margin-bottom:4px;">旋轉角度</div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <input type="range" id="rotateRange" min="0" max="360" value="0"
+                        style="flex:1;accent-color:#c8956c;"
+                        oninput="setRotateDeg(parseInt(this.value))">
+                    <input type="number" id="rotateDeg" min="0" max="360" value="0"
+                        style="width:46px;padding:3px 5px;border:1px solid rgba(44,24,16,0.15);border-radius:4px;font-size:0.72rem;text-align:center;color:#2c1810;"
+                        oninput="setRotateDeg(parseInt(this.value)||0)">
+                    <span style="font-size:0.68rem;color:#8b6355;">°</span>
+                </div>
+                <div style="display:flex;gap:3px;margin-top:4px;">
+                    <button class="img-ctrl-btn" onclick="setRotateDeg((imageRotation-90+360)%360)">↺ -90°</button>
+                    <button class="img-ctrl-btn" onclick="setRotateDeg((imageRotation+90)%360)">↻ +90°</button>
+                </div>
+            </div>
+            <!-- 移動 -->
             <div class="move-pad">
                 <div class="move-ph"></div>
                 <button class="move-btn" onclick="moveImg(0,-10)">▲</button>
@@ -623,14 +703,36 @@ function toggleOverlay() {
     imageOverlay.style.display = isImageVisible ? 'block' : 'none';
     document.getElementById('toggleImgBtn').textContent = isImageVisible ? '👁 隱藏圖片' : '👁 顯示圖片';
 }
+function clearOverlayImage() {
+    imageOverlay.src = '';
+    imageOverlay.style.display = 'none';
+    isImageVisible = false;
+    imageScale = 1; imageX = 0; imageY = 0;
+    setRotateDeg(0);
+    document.getElementById('toggleImgBtn').textContent = '👁 隱藏圖片';
+    toast('底圖已清除');
+}
 function setOpacity(val) {
     imageOverlay.style.opacity = val / 100;
     document.getElementById('opacityVal').textContent = val + '%';
 }
 function scaleImg(d) { imageScale = Math.max(0.1, Math.min(5, imageScale+d)); updateCanvasAndImagePosition(); }
-function rotateImg(d) { imageRotation = (imageRotation+d) % 360; updateCanvasAndImagePosition(); }
+function rotateImg(d) { setRotateDeg((imageRotation+d+360)%360); }
+function setRotateDeg(deg) {
+    deg = Math.max(0, Math.min(360, deg));
+    imageRotation = deg;
+    var r = document.getElementById('rotateRange');
+    var n = document.getElementById('rotateDeg');
+    if (r) r.value = deg;
+    if (n) n.value = deg;
+    updateCanvasAndImagePosition();
+}
 function moveImg(dx,dy) { imageX+=dx; imageY+=dy; updateCanvasAndImagePosition(); }
-function resetImg() { imageScale=1; imageX=0; imageY=0; imageRotation=0; updateCanvasAndImagePosition(); toast('已重置'); }
+function resetImg() {
+    imageScale=1; imageX=0; imageY=0;
+    setRotateDeg(0);
+    toast('已重置');
+}
 
 // ── 全螢幕 ──────────────────────────────────────────
 function toggleFullscreen() {
@@ -713,86 +815,122 @@ function importAiImage() {
     }
 }
 
-// ── Google Drive ──────────────────────────────────
-var GDRIVE_CLIENT_ID = '421333157654-5k86f9huqnif5r7giq6aneqvp10ta1ch.apps.googleusercontent.com';
-var GDRIVE_API_KEY   = 'AIzaSyB7VPtwVx71WrATehdfqNhbgOmMLCiFLG8';
+// ── Google Drive 圖片瀏覽器（不需登入，使用 API Key）──
+var GDRIVE_API_KEY   = 'AIzaSyDudzSa5IVs9y0DsI9Uqs1QuXQqpzoz6V4';
 var GDRIVE_FOLDER_ID = '1rN1BHTJAJiHpmSYj0YmAkplmZbxXANFY';
-var GDRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.readonly';
-var pickerApiLoaded  = false;
-var gisLoaded        = false;
-var driveToken       = '';
-var driveTokenClient = null;
+var driveImagesLoaded = false;
 
-function onApiLoad() {
-    if (typeof gapi === 'undefined') return;
-    gapi.load('picker', { callback: function(){ pickerApiLoaded = true; } });
+function openDriveBrowser() {
+    document.getElementById('driveBrowserOverlay').classList.add('show');
+    if (!driveImagesLoaded) loadDriveImages();
 }
 
-function onGisLoad() {
-    gisLoaded = true;
+function closeDriveBrowser() {
+    document.getElementById('driveBrowserOverlay').classList.remove('show');
 }
 
-function pickerCallback(data) {
-    if (data.action !== google.picker.Action.PICKED) return;
-    var fileId = data.docs[0].id;
-    toast('☁️ 下載中...');
-    fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media', {
-        headers: { Authorization: 'Bearer ' + driveToken }
-    }).then(function(r) {
-        if (!r.ok) throw new Error('下載失敗 ' + r.status);
-        return r.blob();
-    }).then(function(blob) {
-        if (!/^image\//.test(blob.type)) throw new Error('所選檔案不是圖片');
-        var rd = new FileReader();
-        rd.onload = function(e) { loadOverlay(e.target.result); };
-        rd.onerror = function() { toast('❌ Drive 圖片讀取失敗'); };
-        rd.readAsDataURL(blob);
-    }).catch(function(err) {
-        toast('❌ 下載失敗：' + err.message);
-    });
-}
+// 點擊背景關閉
+document.getElementById('driveBrowserOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeDriveBrowser();
+});
 
-function openDrivePicker() {
-    if (!pickerApiLoaded || !window.google || !google.picker) {
-        toast('Google Picker 尚未就緒');
-        return;
-    }
-    var view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES)
-        .setIncludeFolders(false)
-        .setSelectFolderEnabled(false);
+function loadDriveImages() {
+    var grid   = document.getElementById('driveBrowserGrid');
+    var status = document.getElementById('driveBrowserStatus');
+    grid.innerHTML = '';
+    status.textContent = '⏳ 載入圖片中...';
 
-    if (GDRIVE_FOLDER_ID) view.setParent(GDRIVE_FOLDER_ID);
+    var url = 'https://www.googleapis.com/drive/v3/files'
+        + '?q=' + encodeURIComponent("'" + GDRIVE_FOLDER_ID + "' in parents and mimeType contains 'image/' and trashed=false")
+        + '&fields=files(id,name,thumbnailLink,mimeType)'
+        + '&pageSize=50'
+        + '&key=' + GDRIVE_API_KEY;
 
-    new google.picker.PickerBuilder()
-        .addView(view)
-        .setOAuthToken(driveToken)
-        .setDeveloperKey(GDRIVE_API_KEY)
-        .setOrigin(window.location.protocol + '//' + window.location.host)
-        .setCallback(pickerCallback)
-        .build()
-        .setVisible(true);
-}
-
-function authenticateAndPick() {
-    if (!gisLoaded || !window.google || !google.accounts || !google.accounts.oauth2) {
-        toast('Google Identity 尚未載入');
-        return;
-    }
-    if (!driveTokenClient) {
-        driveTokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GDRIVE_CLIENT_ID,
-            scope: GDRIVE_SCOPE,
-            callback: function(resp) {
-                if (resp.error) {
-                    toast('❌ Drive 授權失敗：' + resp.error);
-                    return;
-                }
-                driveToken = resp.access_token || '';
-                openDrivePicker();
+    fetch(url)
+        .then(function(r) {
+            if (!r.ok) throw new Error('API 錯誤 ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            var files = data.files || [];
+            if (files.length === 0) {
+                status.textContent = '資料夾內沒有圖片';
+                return;
             }
+            files.forEach(function(file) {
+                var thumb = document.createElement('div');
+                thumb.className = 'drive-thumb';
+                thumb.title = file.name;
+
+                var img = document.createElement('img');
+                // thumbnailLink 是縮圖，不需授權即可載入
+                img.src = file.thumbnailLink
+                    ? file.thumbnailLink.replace('=s220', '=s400')
+                    : 'https://via.placeholder.com/200?text=No+Preview';
+                img.alt = file.name;
+                img.loading = 'lazy';
+
+                var nameEl = document.createElement('div');
+                nameEl.className = 'drive-thumb-name';
+                nameEl.textContent = file.name;
+
+                thumb.appendChild(img);
+                thumb.appendChild(nameEl);
+                thumb.addEventListener('click', function() {
+                    selectDriveImage(file.id, file.name, file.thumbnailLink);
+                });
+                grid.appendChild(thumb);
+            });
+            driveImagesLoaded = true;
+            status.textContent = '共 ' + files.length + ' 張圖片，點選即可匯入';
+        })
+        .catch(function(err) {
+            status.textContent = '❌ 載入失敗：' + err.message;
         });
+}
+
+function selectDriveImage(fileId, fileName, thumbnailLink) {
+    var status = document.getElementById('driveBrowserStatus');
+    status.textContent = '⏳ 載入「' + fileName + '」...';
+
+    var mode = document.getElementById('aiMode').value;
+
+    // 用高解析縮圖（=s1600），不會有 CORS 問題
+    var thumbUrl = thumbnailLink
+        ? thumbnailLink.replace(/=s\d+/, '=s1600')
+        : null;
+
+    if (!thumbUrl) {
+        status.textContent = '❌ 此圖片沒有可用的縮圖';
+        return;
     }
-    driveTokenClient.requestAccessToken({ prompt: driveToken ? '' : 'consent' });
+
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+        if (mode === 'draw') {
+            saveCanvasState();
+            var op = ctx.globalCompositeOperation;
+            ctx.globalCompositeOperation = 'source-over';
+            var cw=canvas.width, ch=canvas.height, iw=img.width, ih=img.height;
+            var r = Math.min(cw/iw, ch/ih);
+            ctx.drawImage(img, (cw-iw*r)/2, (ch-ih*r)/2, iw*r, ih*r);
+            ctx.globalCompositeOperation = op;
+            toast('✅ 已繪製到畫布');
+        } else {
+            var tmp = document.createElement('canvas');
+            tmp.width = img.width; tmp.height = img.height;
+            tmp.getContext('2d').drawImage(img, 0, 0);
+            loadOverlay(tmp.toDataURL('image/png'));
+        }
+        closeDriveBrowser();
+        status.textContent = '共載入完成';
+    };
+    img.onerror = function() {
+        status.textContent = '❌ 載入失敗，請確認資料夾已設為「知道連結的人都可以檢視」';
+        toast('❌ 圖片載入失敗');
+    };
+    img.src = thumbUrl;
 }
 
 // ── Toast ──────────────────────────────────────────
@@ -808,7 +946,5 @@ var lastTouch=0;
 document.addEventListener('touchend', function(e){ var n=Date.now(); if(n-lastTouch<=300) e.preventDefault(); lastTouch=n; }, false);
 </script>
 
-<script src="https://apis.google.com/js/api.js" onload="onApiLoad()"></script>
-<script src="https://accounts.google.com/gsi/client" async defer onload="onGisLoad()"></script>
 </body>
 </html>
