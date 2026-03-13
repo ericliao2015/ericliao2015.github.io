@@ -197,57 +197,65 @@
         .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
 
         /* ── 側欄收合 ── */
-        #toolbar, #controls {
-            transition: width 0.25s ease, min-width 0.25s ease;
-            position: relative;
-            flex-shrink: 0;
-        }
+        #toolbar  { transition: width 0.28s ease, min-width 0.28s ease; position: relative; flex-shrink: 0; overflow: hidden; }
+        #controls { transition: width 0.28s ease, min-width 0.28s ease; position: relative; flex-shrink: 0; overflow-y: auto; overflow-x: hidden; }
         #toolbar.collapsed  { width: 0 !important; min-width: 0 !important; }
         #controls.collapsed { width: 0 !important; min-width: 0 !important; }
 
-        /* 收合時隱藏內容但不裁切按鈕 */
-        #toolbar.collapsed  .tb-section,
-        #toolbar.collapsed  > *:not(.panel-toggle) { opacity: 0; pointer-events: none; }
-        #controls.collapsed .ctrl-section,
-        #controls.collapsed > *:not(.panel-toggle) { opacity: 0; pointer-events: none; }
+        /* 浮動狀態：fixed 蓋在畫布上，不佔 flex 空間 */
+        #toolbar.floating {
+            position: fixed; top: 42px; left: 0; bottom: 0;
+            width: 190px !important; min-width: 190px !important;
+            z-index: 550; overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.35);
+        }
+        #controls.floating {
+            position: fixed; top: 42px; right: 0; bottom: 0;
+            width: 210px !important; min-width: 210px !important;
+            z-index: 550; overflow-y: auto;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.35);
+        }
 
-        /* 收合按鈕（突出在側欄外緣） */
+        /* 浮動時的半透明遮罩（點畫布收起） */
+        #panelBackdrop {
+            display: none; position: fixed; inset: 0;
+            z-index: 540; background: transparent;
+        }
+        #panelBackdrop.show { display: block; }
+
+        /* 收合/展開 按鈕（fixed，貼在側欄外緣） */
         .panel-toggle {
             position: fixed; top: 50%; transform: translateY(-50%);
             width: 22px; height: 56px;
-            background: #5c3d2e; color: #f5efe6;
-            border: none; cursor: pointer; z-index: 400;
+            border: none; cursor: pointer; z-index: 600;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.75rem;
-            box-shadow: 2px 0 8px rgba(0,0,0,0.3);
-            transition: background 0.15s, left 0.25s, right 0.25s;
-        }
-        .panel-toggle:hover { background: #c8956c; }
-        #toolbarToggle  { border-radius: 0 8px 8px 0; }
-        #controlsToggle { border-radius: 8px 0 0 8px; background: #8b6355; box-shadow: -2px 0 8px rgba(0,0,0,0.3); }
-        #controlsToggle:hover { background: #c8956c; }
-
-        /* 收合後邊緣召回條 */
-        .panel-recall {
-            position: fixed; top: 50%; transform: translateY(-50%);
-            width: 16px; height: 56px;
-            background: rgba(92,61,46,0.85); color: #f5efe6;
-            border: none; cursor: pointer; z-index: 500;
-            display: none; align-items: center; justify-content: center;
-            font-size: 0.65rem;
-            backdrop-filter: blur(4px);
+            font-size: 0.75rem; color: #f5efe6;
             transition: background 0.15s;
         }
-        .panel-recall:hover { background: #c8956c; }
+        #toolbarToggle  { background: #5c3d2e; border-radius: 0 8px 8px 0; box-shadow:  2px 0 8px rgba(0,0,0,0.35); }
+        #controlsToggle { background: #8b6355; border-radius: 8px 0 0 8px; box-shadow: -2px 0 8px rgba(0,0,0,0.35); }
+        .panel-toggle:hover { background: #c8956c !important; }
+
+        /* 召回條（收合時才顯示，貼在螢幕邊緣） */
+        .panel-recall {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 48px;
+            border: none; cursor: pointer; z-index: 600;
+            display: none; align-items: center; justify-content: center;
+            font-size: 0.65rem; color: #f5efe6;
+            background: rgba(92,61,46,0.9);
+            backdrop-filter: blur(4px);
+        }
         #toolbarRecall  { left: 0;  border-radius: 0 8px 8px 0; }
         #controlsRecall { right: 0; border-radius: 8px 0 0 8px; }
+        .panel-recall:hover { background: #c8956c; }
 
         @media (max-width: 800px) {
             #mainLayout { flex-direction: column; height: auto; }
-            #toolbar { width: 100% !important; min-width: 0 !important; flex-direction: row; flex-wrap: wrap; padding: 8px !important; }
+            #toolbar { width: 100% !important; min-width: 0 !important; flex-direction: row; flex-wrap: wrap; padding: 8px !important; overflow: visible !important; position: relative !important; }
             .tb-section { min-width: 140px; }
             #canvasArea { min-height: 55vw; flex: none; height: 60vw; }
-            #controls { width: 100% !important; min-width: 0 !important; }
+            #controls { width: 100% !important; min-width: 0 !important; position: relative !important; }
             .panel-toggle, .panel-recall { display: none !important; }
         }
     </style>
@@ -259,10 +267,10 @@
     <button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ 全螢幕</button>
 </div>
 
+<div id="panelBackdrop" onclick="closeAllFloating()"></div>
 <div id="mainLayout">
 
     <div id="toolbar">
-        <button class="panel-toggle" id="toolbarToggle" onclick="togglePanel('toolbar')" title="收合工具欄">◀</button>
         <div class="tb-section">
             <span class="tb-label">畫布比例</span>
             <div class="ratio-row">
@@ -355,7 +363,6 @@
 
     <!-- 右側控制欄 -->
     <div id="controls">
-        <button class="panel-toggle" id="controlsToggle" onclick="togglePanel('controls')" title="收合控制欄">▶</button>
 
         <!-- ① 匯入方式（共用） -->
         <div class="ctrl-section" style="background:#fff8f0;border-left:3px solid #c8956c;">
@@ -467,9 +474,13 @@
 
 </div>
 <div id="toast"></div>
-<!-- 邊緣召回條 -->
-<button class="panel-recall" id="toolbarRecall"  onclick="togglePanel('toolbar')"  title="展開工具欄">▶</button>
-<button class="panel-recall" id="controlsRecall" onclick="togglePanel('controls')" title="展開控制欄">◀</button>
+
+<!-- 側欄收合按鈕（fixed，不受 overflow 影響） -->
+<button class="panel-toggle" id="toolbarToggle"  onclick="togglePanel('toolbar')"  title="收合工具欄">◀</button>
+<button class="panel-toggle" id="controlsToggle" onclick="togglePanel('controls')" title="收合控制欄">▶</button>
+<!-- 收合後的召回條 -->
+<button class="panel-recall"  id="toolbarRecall"  onclick="togglePanel('toolbar')"  title="展開工具欄">▶</button>
+<button class="panel-recall"  id="controlsRecall" onclick="togglePanel('controls')" title="展開控制欄">◀</button>
 
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbwvn9IYYG_zqFNc0xtIcJgMYmqLMbHFAmx7VoYf4u1gBecbmfU8EwAllBepeX8-aoNBsw/exec';
@@ -989,45 +1000,139 @@ function selectDriveImage(fileId, fileName, thumbnailLink) {
     img.src = thumbUrl;
 }
 
-// ── 側欄收合 ──────────────────────────────────────
+// ── 側欄收合／浮動 ────────────────────────────────
 function updateTogglePositions() {
     var toolbar  = document.getElementById('toolbar');
     var controls = document.getElementById('controls');
     var tbBtn    = document.getElementById('toolbarToggle');
     var ctBtn    = document.getElementById('controlsToggle');
     if (!toolbar || !tbBtn) return;
-
     var tbRect = toolbar.getBoundingClientRect();
     var ctRect = controls.getBoundingClientRect();
+    // 浮動或正常狀態：貼側欄右/左緣
+    if (!toolbar.classList.contains('collapsed')) {
+        tbBtn.style.left = tbRect.right + 'px';
+    }
+    if (!controls.classList.contains('collapsed')) {
+        ctBtn.style.left = (ctRect.left - 22) + 'px';
+    }
+}
 
-    tbBtn.style.left = tbRect.right + 'px';
-    ctBtn.style.left = (ctRect.left - 22) + 'px';
+function closeAllFloating() {
+    var tb = document.getElementById('toolbar');
+    var ct = document.getElementById('controls');
+    var bd = document.getElementById('panelBackdrop');
+    var tbToggle = document.getElementById('toolbarToggle');
+    var ctToggle = document.getElementById('controlsToggle');
+    var tbRecall = document.getElementById('toolbarRecall');
+    var ctRecall = document.getElementById('controlsRecall');
+
+    if (tb.classList.contains('floating')) {
+        tb.classList.remove('floating');
+        tbToggle.style.display = 'none';
+        tbRecall.style.display = 'flex';
+    }
+    if (ct.classList.contains('floating')) {
+        ct.classList.remove('floating');
+        ctToggle.style.display = 'none';
+        ctRecall.style.display = 'flex';
+    }
+    bd.classList.remove('show');
+    setTimeout(updateCanvasAndImagePosition, 50);
 }
 
 function togglePanel(side) {
+    var tb = document.getElementById('toolbar');
+    var ct = document.getElementById('controls');
+    var bd = document.getElementById('panelBackdrop');
+    var tbToggle = document.getElementById('toolbarToggle');
+    var ctToggle = document.getElementById('controlsToggle');
+    var tbRecall = document.getElementById('toolbarRecall');
+    var ctRecall = document.getElementById('controlsRecall');
+
     if (side === 'toolbar') {
-        var el     = document.getElementById('toolbar');
-        var btn    = document.getElementById('toolbarToggle');
-        var recall = document.getElementById('toolbarRecall');
-        var collapsed = el.classList.toggle('collapsed');
-        btn.textContent = collapsed ? '▶' : '◀';
-        recall.style.display = collapsed ? 'flex' : 'none';
+        var isCollapsed = tb.classList.contains('collapsed');
+        var isFloating  = tb.classList.contains('floating');
+
+        if (!isCollapsed && !isFloating) {
+            // 正常 → 收合
+            tb.classList.add('collapsed');
+            tbToggle.style.display = 'none';
+            tbRecall.style.display = 'flex';
+            tbRecall.style.left = '0';
+            // 收起另一側的浮動
+            if (ct.classList.contains('floating')) closeAllFloating();
+
+        } else if (isCollapsed) {
+            // 收合 → 浮動（蓋在畫布上）
+            tb.classList.remove('collapsed');
+            tb.classList.add('floating');
+            tbToggle.style.display = 'flex';
+            tbToggle.style.left = '190px';
+            tbRecall.style.display = 'none';
+            bd.classList.add('show');
+            // 若右側也浮動則關掉
+            if (ct.classList.contains('floating')) {
+                ct.classList.remove('floating');
+                ctToggle.style.display = 'none';
+                ctRecall.style.display = 'flex';
+            }
+
+        } else if (isFloating) {
+            // 浮動 → 收合
+            tb.classList.remove('floating');
+            tb.classList.add('collapsed');
+            tbToggle.style.display = 'none';
+            tbRecall.style.display = 'flex';
+            if (!ct.classList.contains('floating')) bd.classList.remove('show');
+        }
+
     } else {
-        var el     = document.getElementById('controls');
-        var btn    = document.getElementById('controlsToggle');
-        var recall = document.getElementById('controlsRecall');
-        var collapsed = el.classList.toggle('collapsed');
-        btn.textContent = collapsed ? '◀' : '▶';
-        recall.style.display = collapsed ? 'flex' : 'none';
+        var isCollapsed = ct.classList.contains('collapsed');
+        var isFloating  = ct.classList.contains('floating');
+
+        if (!isCollapsed && !isFloating) {
+            ct.classList.add('collapsed');
+            ctToggle.style.display = 'none';
+            ctRecall.style.display = 'flex';
+            if (tb.classList.contains('floating')) closeAllFloating();
+
+        } else if (isCollapsed) {
+            ct.classList.remove('collapsed');
+            ct.classList.add('floating');
+            ctToggle.style.display = 'flex';
+            ctToggle.style.left = (window.innerWidth - 210 - 22) + 'px';
+            ctRecall.style.display = 'none';
+            bd.classList.add('show');
+            if (tb.classList.contains('floating')) {
+                tb.classList.remove('floating');
+                tbToggle.style.display = 'none';
+                tbRecall.style.display = 'flex';
+            }
+
+        } else if (isFloating) {
+            ct.classList.remove('floating');
+            ct.classList.add('collapsed');
+            ctToggle.style.display = 'none';
+            ctRecall.style.display = 'flex';
+            if (!tb.classList.contains('floating')) bd.classList.remove('show');
+        }
     }
+
     setTimeout(function() {
         updateTogglePositions();
         updateCanvasAndImagePosition();
-    }, 280);
+    }, 300);
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-    setTimeout(updateTogglePositions, 100);
+    document.getElementById('toolbarRecall').style.display  = 'none';
+    document.getElementById('controlsRecall').style.display = 'none';
+    setTimeout(updateTogglePositions, 150);
+});
+window.addEventListener('resize', function() {
+    updateTogglePositions();
+    updateCanvasAndImagePosition();
 });
 var toastTimer;
 function toast(msg) {
