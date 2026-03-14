@@ -151,7 +151,7 @@
         /* Drive 圖片選取浮動視窗 */
         #driveBrowserOverlay {
             display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5); z-index: 500;
+            background: rgba(0,0,0,0.5); z-index: 800;
             align-items: center; justify-content: center;
         }
         #driveBrowserOverlay.show { display: flex; }
@@ -196,36 +196,55 @@
         #driveBrowserStatus {
             padding: 8px 12px; font-size: 0.75rem; color: #8b6355;
             border-top: 1px solid rgba(44,24,16,0.08); text-align: center; min-height: 36px;
-        } transform: translateX(-50%) translateY(80px); background: #2c1810; color: #f5efe6; padding: 9px 20px; border-radius: 20px; font-size: 0.82rem; z-index: 9999; transition: transform 0.25s ease; pointer-events: none; white-space: nowrap; }
+        }
+
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2c1810; color: #f5efe6; padding: 9px 20px; border-radius: 20px; font-size: 0.82rem; z-index: 9999; transition: transform 0.25s ease; pointer-events: none; white-space: nowrap; }
         #toast.show { transform: translateX(-50%) translateY(0); }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
 
         /* ── 側欄收合 ── */
-        #toolbar  { transition: width 0.28s ease, min-width 0.28s ease; position: relative; flex-shrink: 0; overflow: hidden; }
-        #controls { transition: width 0.28s ease, min-width 0.28s ease; position: relative; flex-shrink: 0; overflow-y: auto; overflow-x: hidden; }
-        #toolbar.collapsed  { width: 0 !important; min-width: 0 !important; }
-        #controls.collapsed { width: 0 !important; min-width: 0 !important; }
+        #toolbar, #controls {
+            position: relative; flex-shrink: 0;
+        }
+        /* 用 wrapper 包住側欄 + 箭頭，讓箭頭跟著側欄走 */
+        .panel-wrap {
+            display: flex; flex-shrink: 0;
+            transition: width 0.28s ease;
+        }
+        #toolbarWrap  { width: 190px; }
+        #controlsWrap { width: 210px; }
+        #toolbarWrap.collapsed  { width: 0; }
+        #controlsWrap.collapsed { width: 0; }
 
-        /* 收合/展開 按鈕（fixed，不受 overflow 影響） */
+        #toolbar  { width: 190px; min-width: 190px; overflow: hidden; flex-shrink: 0; transition: width 0.28s ease, min-width 0.28s ease; }
+        #controls { width: 210px; min-width: 210px; overflow-y: auto; overflow-x: hidden; flex-shrink: 0; transition: width 0.28s ease, min-width 0.28s ease; }
+        #toolbarWrap.collapsed  #toolbar  { width: 0 !important; min-width: 0 !important; }
+        #controlsWrap.collapsed #controls { width: 0 !important; min-width: 0 !important; }
+
+        /* 箭頭按鈕：獨立窄欄，緊貼側欄邊緣，不受 overflow 影響 */
         .panel-toggle {
-            position: fixed; top: 50%; transform: translateY(-50%);
-            width: 22px; height: 56px;
-            border: none; cursor: pointer; z-index: 600;
+            flex-shrink: 0; width: 20px;
+            border: none; cursor: pointer; z-index: 100;
             display: flex; align-items: center; justify-content: center;
             font-size: 0.75rem; color: #f5efe6;
             transition: background 0.15s;
+            align-self: stretch;
         }
-        #toolbarToggle  { background: #5c3d2e; border-radius: 0 8px 8px 0; box-shadow:  2px 0 8px rgba(0,0,0,0.35); }
-        #controlsToggle { background: #8b6355; border-radius: 8px 0 0 8px; box-shadow: -2px 0 8px rgba(0,0,0,0.35); }
+        #toolbarToggle  { background: #5c3d2e; border-radius: 0 8px 8px 0; box-shadow:  2px 0 6px rgba(0,0,0,0.3); }
+        #controlsToggle { background: #8b6355; border-radius: 8px 0 0 8px; box-shadow: -2px 0 6px rgba(0,0,0,0.3); }
+        #controls { order: 2; }
+        #controlsToggle { order: 1; }
         .panel-toggle:hover { background: #c8956c !important; }
 
         @media (max-width: 800px) {
             #mainLayout { flex-direction: column; height: auto; }
-            #toolbar { width: 100% !important; min-width: 0 !important; flex-direction: row; flex-wrap: wrap; padding: 8px !important; overflow: visible !important; position: relative !important; }
+            #toolbarWrap  { width: 100% !important; }
+            #controlsWrap { width: 100% !important; }
+            #toolbar  { width: 100% !important; min-width: 0 !important; flex-direction: row; flex-wrap: wrap; padding: 8px !important; overflow: visible !important; }
             .tb-section { min-width: 140px; }
             #canvasArea { min-height: 55vw; flex: none; height: 60vw; }
-            #controls { width: 100% !important; min-width: 0 !important; position: relative !important; }
+            #controls { width: 100% !important; min-width: 0 !important; }
             .panel-toggle { display: none !important; }
         }
     </style>
@@ -239,6 +258,7 @@
 
 <div id="mainLayout">
 
+    <div id="toolbarWrap" class="panel-wrap">
     <div id="toolbar">
         <div class="tb-section">
             <span class="tb-label">畫布比例</span>
@@ -292,7 +312,9 @@
                 <span style="font-size:0.68rem;color:rgba(245,239,230,0.6);">px</span>
             </div>
         </div>
-    </div>
+    </div><!-- /toolbar -->
+    <button class="panel-toggle" id="toolbarToggle" onclick="togglePanel('toolbar')" title="收合工具欄">◀</button>
+</div><!-- /toolbarWrap -->
 
     <!-- Google Drive 圖片選取浮動視窗 -->
     <div id="driveBrowserOverlay">
@@ -331,6 +353,7 @@
     </div>
 
     <!-- 右側控制欄 -->
+    <div id="controlsWrap" class="panel-wrap">
     <div id="controls">
 
         <!-- ① 匯入方式（共用） -->
@@ -439,14 +462,12 @@
         <div style="padding:8px 12px;font-size:0.68rem;color:#8b6355;text-align:center;">
             Made by <a href="https://kentxchang.blogspot.tw/" target="_blank" style="color:#c8956c;text-decoration:none;">阿剛老師</a>
         </div>
-    </div>
+    </div><!-- /controls -->
+    </div><!-- /controlsWrap -->
+    <button class="panel-toggle" id="controlsToggle" onclick="togglePanel('controls')" title="收合控制欄">▶</button>
 
-</div>
+</div><!-- /mainLayout -->
 <div id="toast"></div>
-
-<!-- 側欄收合按鈕（fixed） -->
-<button class="panel-toggle" id="toolbarToggle"  onclick="togglePanel('toolbar')"  title="收合工具欄">◀</button>
-<button class="panel-toggle" id="controlsToggle" onclick="togglePanel('controls')" title="收合控制欄">▶</button>
 
 <script>
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbwvn9IYYG_zqFNc0xtIcJgMYmqLMbHFAmx7VoYf4u1gBecbmfU8EwAllBepeX8-aoNBsw/exec';
@@ -480,11 +501,7 @@ window.addEventListener('DOMContentLoaded', function() {
     initCtx();
     updateCanvasAndImagePosition();
     updateAiImportLabel();
-    setTimeout(updateTogglePositions, 150);
-    window.addEventListener('resize', function() {
-        updateCanvasAndImagePosition();
-        updateTogglePositions();
-    });
+    window.addEventListener('resize', updateCanvasAndImagePosition);
 });
 
 function initCtx() {
@@ -967,38 +984,20 @@ function selectDriveImage(fileId, fileName, thumbnailLink) {
 }
 
 // ── 側欄收合 ──────────────────────────────────────
-function updateTogglePositions() {
-    var toolbar  = document.getElementById('toolbar');
-    var controls = document.getElementById('controls');
-    var tbBtn    = document.getElementById('toolbarToggle');
-    var ctBtn    = document.getElementById('controlsToggle');
-    if (!toolbar || !tbBtn) return;
-    var tbRect = toolbar.getBoundingClientRect();
-    var ctRect = controls.getBoundingClientRect();
-    tbBtn.style.left = tbRect.right + 'px';
-    ctBtn.style.left = (ctRect.left - 22) + 'px';
-}
-
 function togglePanel(side) {
-    var el  = document.getElementById(side === 'toolbar' ? 'toolbar' : 'controls');
-    var btn = document.getElementById(side === 'toolbar' ? 'toolbarToggle' : 'controlsToggle');
-    var collapsed = el.classList.toggle('collapsed');
-    btn.textContent = side === 'toolbar'
-        ? (collapsed ? '▶' : '◀')
-        : (collapsed ? '◀' : '▶');
-    setTimeout(function() {
-        updateTogglePositions();
-        updateCanvasAndImagePosition();
-    }, 300);
+    if (side === 'toolbar') {
+        var wrap = document.getElementById('toolbarWrap');
+        var btn  = document.getElementById('toolbarToggle');
+        var collapsed = wrap.classList.toggle('collapsed');
+        btn.textContent = collapsed ? '▶' : '◀';
+    } else {
+        var wrap = document.getElementById('controlsWrap');
+        var btn  = document.getElementById('controlsToggle');
+        var collapsed = wrap.classList.toggle('collapsed');
+        btn.textContent = collapsed ? '◀' : '▶';
+    }
+    setTimeout(updateCanvasAndImagePosition, 300);
 }
-
-window.addEventListener('DOMContentLoaded', function() {
-    setTimeout(updateTogglePositions, 150);
-});
-window.addEventListener('resize', function() {
-    updateTogglePositions();
-    updateCanvasAndImagePosition();
-});
 var toastTimer;
 function toast(msg) {
     var el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
